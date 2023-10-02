@@ -23,6 +23,7 @@ dependencies:
   hand_signature: ^3.0.0
   flutter_image_compress: ^2.0.3
   reorderables: ^0.6.0
+  get: ^4.6.6
 
 dev_dependencies:
   flutter_test:
