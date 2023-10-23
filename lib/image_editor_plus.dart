@@ -70,9 +70,6 @@ class ImageEditor extends StatelessWidget {
     this.flipOption = const o.FlipOption(),
     this.rotateOption = const o.RotateOption(),
     this.textOption = const o.TextOption(),
-  
-
- 
   }) : super(key: key);
 
   @override
@@ -84,20 +81,35 @@ class ImageEditor extends StatelessWidget {
       throw Exception(
           'No image to work with, provide an image or allow the image picker.');
     }
-
-    return SingleImageEditor(
-      image: image,
-      savePath: savePath,
-      imagePickerOption: imagePickerOption,
-      cropOption: cropOption,
-      blurOption: blurOption,
-      brushOption: brushOption,
-      emojiOption: emojiOption,
-      filtersOption: filtersOption,
-      flipOption: flipOption,
-      rotateOption: rotateOption,
-      textOption: textOption,
-    );
+    if (image != null) {
+      return SingleImageEditor(
+        image: image,
+        savePath: savePath,
+        imagePickerOption: imagePickerOption,
+        cropOption: cropOption,
+        blurOption: blurOption,
+        brushOption: brushOption,
+        emojiOption: emojiOption,
+        filtersOption: filtersOption,
+        flipOption: flipOption,
+        rotateOption: rotateOption,
+        textOption: textOption,
+      );
+    } else {
+      return MultiImageEditor(
+        images: images ?? [],
+        savePath: savePath,
+        imagePickerOption: imagePickerOption,
+        cropOption: cropOption,
+        blurOption: blurOption,
+        brushOption: brushOption,
+        emojiOption: emojiOption,
+        filtersOption: filtersOption,
+        flipOption: flipOption,
+        rotateOption: rotateOption,
+        textOption: textOption,
+      );
+    }
   }
 
   static i18n(Map<String, String> translations) {
@@ -131,6 +143,225 @@ class ImageEditor extends StatelessWidget {
   );
 }
 
+/// Show multiple image carousel to edit multple images at one and allow more images to be added
+class MultiImageEditor extends StatefulWidget {
+  final List images;
+  final String? savePath;
+
+  final o.ImagePickerOption? imagePickerOption;
+  final o.CropOption? cropOption;
+  final o.BlurOption? blurOption;
+  final o.BrushOption? brushOption;
+  final o.EmojiOption? emojiOption;
+  final o.FiltersOption? filtersOption;
+  final o.FlipOption? flipOption;
+  final o.RotateOption? rotateOption;
+  final o.TextOption? textOption;
+
+  const MultiImageEditor({
+    Key? key,
+    this.images = const [],
+    this.savePath,
+    this.imagePickerOption,
+    this.cropOption = const o.CropOption(),
+    this.blurOption = const o.BlurOption(),
+    this.brushOption = const o.BrushOption(),
+    this.emojiOption = const o.EmojiOption(),
+    this.filtersOption = const o.FiltersOption(),
+    this.flipOption = const o.FlipOption(),
+    this.rotateOption = const o.RotateOption(),
+    this.textOption = const o.TextOption(),
+  }) : super(key: key);
+
+  @override
+  createState() => _MultiImageEditorState();
+}
+
+class _MultiImageEditorState extends State<MultiImageEditor> {
+  List<ImageItem> images = [];
+
+  @override
+  void initState() {
+    images = widget.images.map((e) => ImageItem(e)).toList();
+
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    viewportSize = MediaQuery.of(context).size;
+
+    return Theme(
+      data: ImageEditor.theme,
+      child: Scaffold(
+        key: scaffoldGlobalKey,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          actions: [
+            const BackButton(),
+            const Spacer(),
+            if (widget.imagePickerOption != null &&
+                images.length < widget.imagePickerOption!.maxLength &&
+                widget.imagePickerOption!.pickFromGallery)
+              IconButton(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                icon: const Icon(Icons.photo),
+                onPressed: () async {
+                  var selected = await picker.pickMultiImage();
+
+                  images.addAll(selected.map((e) => ImageItem(e)).toList());
+                  setState(() {});
+                },
+              ),
+            if (widget.imagePickerOption != null &&
+                images.length < widget.imagePickerOption!.maxLength &&
+                widget.imagePickerOption!.captureFromCamera)
+              IconButton(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                icon: const Icon(Icons.camera_alt),
+                onPressed: () async {
+                  var selected =
+                      await picker.pickImage(source: ImageSource.camera);
+
+                  if (selected == null) return;
+
+                  images.add(ImageItem(selected));
+                  setState(() {});
+                },
+              ),
+            IconButton(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              icon: const Icon(Icons.check),
+              onPressed: () async {
+                Navigator.pop(context, images);
+              },
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            SizedBox(
+              height: 332,
+              width: double.infinity,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    const SizedBox(width: 32),
+                    for (var image in images)
+                      Stack(children: [
+                        GestureDetector(
+                          onTap: () async {
+                            var img = await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => SingleImageEditor(
+                                  image: image,
+                                ),
+                              ),
+                            );
+
+                            if (img != null) {
+                              image.load(img);
+                              setState(() {});
+                            }
+                          },
+                          child: Container(
+                            margin: const EdgeInsets.only(
+                                top: 32, right: 32, bottom: 32),
+                            width: 200,
+                            height: 300,
+                            decoration: BoxDecoration(
+                              color: Colors.transparent,
+                              border:
+                                  Border.all(color: Colors.white.withAlpha(80)),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: Image.memory(
+                                image.image,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          top: 36,
+                          right: 36,
+                          child: Container(
+                            height: 32,
+                            width: 32,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(60),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: IconButton(
+                              iconSize: 20,
+                              padding: const EdgeInsets.all(0),
+                              onPressed: () {
+                                // print('removing');
+                                images.remove(image);
+                                setState(() {});
+                              },
+                              icon: const Icon(Icons.clear_outlined),
+                            ),
+                          ),
+                        ),
+                        if (widget.filtersOption != null)
+                          Positioned(
+                            bottom: 32,
+                            left: 0,
+                            child: Container(
+                              height: 38,
+                              width: 38,
+                              alignment: Alignment.center,
+                              decoration: BoxDecoration(
+                                color: Colors.black.withAlpha(100),
+                                borderRadius: const BorderRadius.only(
+                                  topRight: Radius.circular(19),
+                                ),
+                              ),
+                              child: IconButton(
+                                iconSize: 20,
+                                padding: const EdgeInsets.all(0),
+                                onPressed: () async {
+                                  Uint8List? editedImage = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => ImageFilters(
+                                        themeController: themeController,
+                                        image: image.image,
+                                        options: widget.filtersOption,
+                                      ),
+                                    ),
+                                  );
+
+                                  if (editedImage != null) {
+                                    image.load(editedImage);
+                                  }
+
+                                  setState(() {});
+                                },
+                                icon: const Icon(Icons.photo_filter_sharp),
+                              ),
+                            ),
+                          ),
+                      ]),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  final picker = ImagePicker();
+}
+
 /// Image editor with all option available
 class SingleImageEditor extends StatefulWidget {
   final dynamic image;
@@ -146,8 +377,6 @@ class SingleImageEditor extends StatefulWidget {
   final o.RotateOption? rotateOption;
   final o.TextOption? textOption;
 
-
-
   const SingleImageEditor({
     Key? key,
     this.image,
@@ -161,7 +390,6 @@ class SingleImageEditor extends StatefulWidget {
     this.flipOption = const o.FlipOption(),
     this.rotateOption = const o.RotateOption(),
     this.textOption = const o.TextOption(),
-  
   }) : super(key: key);
 
   @override
@@ -254,21 +482,19 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
               ),
             IconButton(
               padding: const EdgeInsets.symmetric(horizontal: 8),
-              icon: Icon(Icons.check,
-                  color: themeController.theme == ThemeMode.dark
-                      ? Colors.white
-                      : Colors.black),
+              icon: const Icon(Icons.check),
               onPressed: () async {
                 resetTransformation();
+                var binaryIntList =
+                    await screenshotController.capture(pixelRatio: pixelRatio);
+                print(" binaryIntList:- $binaryIntList"); 
                 setState(() {});
 
                 loadingScreen.show();
 
-                var binaryIntList =
-                    await screenshotController.capture(pixelRatio: pixelRatio);
-
+               
                 loadingScreen.hide();
-
+                print(" mounted:- $mounted");
                 if (mounted) Navigator.pop(context, binaryIntList);
               },
             ),
@@ -280,6 +506,7 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
 
   @override
   void initState() {
+    print("widget.image :- ${widget.image}");
     if (widget.image != null) {
       loadImage(widget.image!);
     }
@@ -460,10 +687,9 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
                 () => Container(
                   decoration: BoxDecoration(
                     color: themeController.theme == ThemeMode.dark
-                        ? themeController.darkTheme.appBarTheme
-                            .backgroundColor
-                        : themeController.lightTheme.appBarTheme
-                            .backgroundColor,
+                        ? themeController.darkTheme.appBarTheme.backgroundColor
+                        : themeController
+                            .lightTheme.appBarTheme.backgroundColor,
                   ),
                   child: SafeArea(
                     child: Row(
@@ -524,8 +750,7 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
             decoration: BoxDecoration(
               color: themeController.theme == ThemeMode.dark
                   ? themeController.darkTheme.appBarTheme.backgroundColor
-                  : 
-                      themeController.lightTheme.appBarTheme.backgroundColor,
+                  : themeController.lightTheme.appBarTheme.backgroundColor,
               shape: BoxShape.rectangle,
               //   boxShadow: [
               //     BoxShadow(blurRadius: 1),
@@ -972,6 +1197,7 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
     ));
 
     setState(() {});
+    print("currentImage :- $currentImage");
   }
 }
 
@@ -1034,7 +1260,6 @@ class ImageCropper extends StatefulWidget {
     ],
     required this.themeController,
   }) : super(key: key);
-
   @override
   createState() => _ImageCropperState();
 }
@@ -1205,7 +1430,7 @@ class _ImageCropperState extends State<ImageCropper> {
                                             ThemeMode.dark
                                         ? Colors.white
                                         : Colors.black
-                                    : Colors.grey,
+  : const Color(0xFF6B6A6A),
                               ),
                               onPressed: () {
                                 isLandscape = false;
@@ -1226,7 +1451,7 @@ class _ImageCropperState extends State<ImageCropper> {
                                             ThemeMode.dark
                                         ? Colors.white
                                         : Colors.black
-                                    : Colors.grey,
+                                    : const Color(0xFF6B6A6A),
                               ),
                               onPressed: () {
                                 isLandscape = true;
@@ -1252,7 +1477,7 @@ class _ImageCropperState extends State<ImageCropper> {
                                                   ThemeMode.dark
                                               ? Colors.white
                                               : Colors.black
-                                          : Colors.white54,
+                                          : const Color(0xFF6B6A6A),
                                     ),
                                   )),
                             )
