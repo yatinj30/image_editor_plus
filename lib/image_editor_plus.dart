@@ -54,25 +54,27 @@ class ImageEditor extends StatelessWidget {
   final o.FlipOption? flipOption;
   final o.RotateOption? rotateOption;
   final o.TextOption? textOption;
+  final Function discardButton;
   final Widget AdWidget;
 
-  const ImageEditor({
-    Key? key,
-    this.image,
-    this.images,
-    this.savePath,
-    Color? appBarColor,
-    this.imagePickerOption,
-    this.cropOption = const o.CropOption(),
-    this.blurOption = const o.BlurOption(),
-    this.brushOption = const o.BrushOption(),
-    this.emojiOption = const o.EmojiOption(),
-    this.filtersOption = const o.FiltersOption(),
-    this.flipOption = const o.FlipOption(),
-    this.rotateOption = const o.RotateOption(),
-    this.textOption = const o.TextOption(),
-    required this.AdWidget,
-  }) : super(key: key);
+  const ImageEditor(
+      {Key? key,
+      this.image,
+      this.images,
+      this.savePath,
+      Color? appBarColor,
+      this.imagePickerOption,
+      this.cropOption = const o.CropOption(),
+      this.blurOption = const o.BlurOption(),
+      this.brushOption = const o.BrushOption(),
+      this.emojiOption = const o.EmojiOption(),
+      this.filtersOption = const o.FiltersOption(),
+      this.flipOption = const o.FlipOption(),
+      this.rotateOption = const o.RotateOption(),
+      this.textOption = const o.TextOption(),
+      required this.AdWidget,
+      required this.discardButton})
+      : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -97,6 +99,7 @@ class ImageEditor extends StatelessWidget {
         rotateOption: rotateOption,
         textOption: textOption,
         AdWidget: AdWidget,
+        discardButton: discardButton,
       );
     } else {
       return MultiImageEditor(
@@ -261,6 +264,7 @@ class _MultiImageEditorState extends State<MultiImageEditor> {
                                 builder: (context) => SingleImageEditor(
                                   image: image,
                                   AdWidget: Container(),
+                                  discardButton: () {},
                                 ),
                               ),
                             );
@@ -380,6 +384,7 @@ class SingleImageEditor extends StatefulWidget {
   final o.FlipOption? flipOption;
   final o.RotateOption? rotateOption;
   final o.TextOption? textOption;
+  final Function discardButton;
 
   final Widget AdWidget;
 
@@ -397,6 +402,7 @@ class SingleImageEditor extends StatefulWidget {
     this.rotateOption = const o.RotateOption(),
     this.textOption = const o.TextOption(),
     required this.AdWidget,
+    required this.discardButton,
   }) : super(key: key);
 
   @override
@@ -416,7 +422,21 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
 
   List<Widget> get filterActions {
     return [
-      const BackButton(),
+      BackButton(
+        onPressed: () async {
+          resetTransformation();
+          var binaryIntList =
+              await screenshotController.capture(pixelRatio: pixelRatio);
+          print(" binaryIntList:- $binaryIntList");
+          setState(() {});
+
+          loadingScreen.show();
+
+          loadingScreen.hide();
+          print(" mounted:- $mounted");
+          widget.discardButton(binaryIntList);
+        },
+      ),
       SizedBox(
         width: MediaQuery.of(context).size.width - 48,
         child: SingleChildScrollView(
